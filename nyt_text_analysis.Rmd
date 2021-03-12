@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ```
 
-```{r}
+```{r, include=FALSE}
 # Load Packages
 library(tidyverse)
 library(stringr)
@@ -23,6 +23,7 @@ library(lubridate)
 library(ggplot2)
 library(tidyr)
 library(tidymodels)
+library(tidytext)
 
 theme_set(theme_minimal())
 
@@ -56,6 +57,17 @@ filter <- 'news_desk:("Foreign")'
 begin <- '20100101'
 end <- '20201231'
 
+# Testing GET Request on Single Request
+articles <- GET(base.url, query = list(`q` = search_term,
+                                       `fq` = filter,
+                                       `begin_date` = begin,
+                                       `end_date` = end,
+                                       `api-key` = key))
+
+# Parse info from JSON format
+response <- content(articles, "text")  
+response_df <- fromJSON(response, simplifyDataFrame = TRUE, flatten = TRUE) # will need this for later
+
 
 # Create function for specified parameters above
 nyt_api <- function(page){
@@ -86,7 +98,7 @@ docs <- nyt_api(page = 2) # yay it works!
 # Extract total hits
 hits = response_df$response$meta$hits
 
-# Store number of pages 
+# Store number of pages (there are 10 hits per page)
 pages = ceiling(hits/10)
 
 # Modify function to slow down scraping
@@ -95,7 +107,6 @@ nyt_api_slow <- slowly(f = nyt_api, rate = rate_delay(1))
 # Create new df with all articles that match hit using iterative function
 articles_df <- map_dfr(.x = (1:pages), ~nyt_api_slow(page = .))
 ```
-
 
 ```{r data cleaning}
 # Main df
@@ -112,27 +123,36 @@ cleaned_articles_df <- articles_df %>%
   mutate(pub_date = ymd_hms(pub_date),
          year = year(pub_date),
          subsection_name = as.factor(subsection_name))
-     
-# Also want to look at the keywords list and make it a df on its own
-keywords_df <- articles_df %>% 
-  unnest_longer(col = keywords) %>% 
-  select(headline.main, keywords)
 
-# keywords saved as a matrix within df, so convert all back to df
-keywords_df <- do.call(data.frame, keywords_df) %>% 
-  #https://stackoverflow.com/questions/30896605/dataframe-within-dataframe
-  pivot_wider(names_from = keywords.name, 
-              values_from = keywords.value) %>% 
-  select(headline.main,
-         glocations,
-         subject,
-         persons,
-         organizations)
+# in this cleaned df, there are several areas to extract text from (e.g., the title, the lead paragraph etc.)
+# im going to look at the leading paragraphs of each article
+```
 
-# i didn't end up using this for any analysis but wanted to show that I could further undo the lists within the previous df
+### Tidying the Text
+(notes)
 
-# one problem I faced here is that there were a lot of "NULL" columns and I looked online, it said you can use `fill()` but it didn't accurate fill it because it was not uniformly missing values (since some columns truly has no values), so using `fill()` would fill out columns that didn't align with what was intended.
+```{r tidied text, message=FALSE, warning=FALSE}
+# Select only for the lead paragraph, it's already in tibble() format
+tidied_text <- cleaned_articles_df %>% 
+  select(pub_date, 
+         lead_paragraph) %>% 
+  tibble(line = 1:464, text = lead_paragraph) %>% 
+  unnest_tokens(word, lead_paragraph) %>% 
+  select(!text)
 
+# Load stopwords data
+data(stop_words)
+
+tidied_text <- tidied_text %>% 
+  anti_join(stop_words)
+
+# Count the Frequency of Certain Words
+tidied_text %>% 
+  count(word, sort = TRUE)
+  
+
+
+tidied_text
 ```
 
 ## Data Visualization
