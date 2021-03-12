@@ -135,7 +135,8 @@ cleaned_articles_df <- articles_df %>%
 # Select only for the lead paragraph, it's already in tibble() format
 tidied_text <- cleaned_articles_df %>% 
   select(pub_date, 
-         lead_paragraph) %>% 
+         lead_paragraph,
+         subsection_name) %>% 
   tibble(line = 1:464, text = lead_paragraph) %>% 
   unnest_tokens(word, lead_paragraph) %>% 
   select(!text)
@@ -146,165 +147,99 @@ data(stop_words)
 tidied_text <- tidied_text %>% 
   anti_join(stop_words)
 
-# Count the Frequency of Certain Words
+```
+
+## Text Analysis
+
+### Most Common Words in Leading Paragraphs
+
+(text)
+
+```{r common words viz}
+# Count and Plot the Frequency of Certain Words
 tidied_text %>% 
-  count(word, sort = TRUE)
+  count(word, sort = TRUE) %>% 
+  filter(word != "migrants") %>% #removing because it's redundant given all articles are about migrants
+  arrange(desc(n)) %>% 
+  head(10) %>% 
+  ggplot(aes(x = n, y = reorder(word, n))) +
+  geom_col()
+```
+
+### Most Common Words used for Each Continent 
+
+```{r common words cont}
+
+# Calculate tf-idf scores for words mention in each continent area
+continent_tf_idf <- tidied_text %>%
+  count(subsection_name, word) %>%
+  bind_tf_idf(term = word, document = subsection_name, n = n)
+
+# visualize the top N terms per character by tf-idf score
+continent_tf_idf %>%
+  arrange(desc(tf_idf)) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  group_by(subsection_name) %>%
+  slice_max(n = 10, order_by = tf_idf, with_ties = FALSE) %>%
+  # resolve ambiguities when same word appears for different characters
+  ungroup() %>%
+  mutate(word = reorder_within(x = word, by = tf_idf, within = subsection_name)) %>%
+  ggplot(mapping = aes(x = word, y = tf_idf)) +
+  geom_col(show.legend = FALSE) +
+  scale_x_reordered() +
+  labs(
+    title = "Most important words in Articles about Migration",
+    subtitle = "By Continent",
+    x = NULL,
+    y = "tf-idf",
+    caption = "Source: NYT API"
+  ) +
+  facet_wrap(~subsection_name, scales = "free") +
+  coord_flip()
+
+```
+
+
+### Article Sentiment Analysis
+
+(text) -- need to cite both dictionary lexicons
+* changed the df to use snippet instead of lead paragraph to get rid of the country/cities that keep popping up, see if the frequency is different
+
+```{r sentiment, message=FALSE}
+
+# Creating sentiment df
+sentiment_text <- cleaned_articles_df %>% 
+  select(pub_date, 
+         snippet, # differs from tidied_text here by using "snippet" instead of "lead_paragraph"
+         subsection_name) %>% 
+  tibble(line = 1:464, text = snippet) %>% 
+  unnest_tokens(word, snippet) %>% 
+  select(!text) %>% 
+  anti_join(stop_words)
+
+# Get Sentiment
+afinn_sentiment <- get_sentiments("afinn")
+nrc_sentiment <- get_sentiments("nrc")
+
+articles_sentiment <- tidied_text %>% 
+  inner_join(nrc_sentiment) %>% 
+  count(subsection_name, index = pub_date, sentiment) %>% 
+  spread(sentiment, n, fill = 0) %>% #could try to use pivot_longer here
+  mutate(sentiment = positive - negative)
+
+  ggplot(articles_sentiment, aes(x = index, y = sentiment, fill = subsection_name)) +
+  geom_col() +
+    facet_wrap(~subsection_name)
+  
+  
+#  ??? wtf is happening why is it not graphing
+  
   
 
-
-tidied_text
 ```
 
-## Data Visualization
-
-### Distribution of Migration-Related News by Continental Region
-
-As a first step at looking at the NYT articles data, I wanted to see what the distribution of article frequency looked like by each continental region.
-
-```{r analysis1}
-
-#Distribution of Migration-Related News by Continental Region
-cleaned_articles_df %>% 
-  ggplot() +
-  geom_bar(mapping = aes(x = subsection_name, fill = subsection_name), alpha = 0.8) +
-  scale_fill_brewer(palette = "Dark2") +
-  theme(legend.position = "none") +
-  labs(title = "Distribution of Migration-Related News by Continental Region",
-         x = "Continent",
-         y = "Frequency")
-```
-
-This simple data visualization shows us the frequency of events relating to migrants and migration reported by the New York Times int he past five years. Unsurprisingly, the highest count is in Europe, likely resulting to the migrant crisis during the Arab Spring movement, but it is interesting to note that the Americas and Asia Pacific have relatively similar frequency, so it might be worth looking deeper into what are the kinds of stories being talked about.
 
 
-### Frequncy of Migrant Stories Over Time
-
-I also think it's worth exploring how the frequency and length of these stories changed over the past five years, so we can also create another bar plot to look at the frequency of articles relating to migration over the past five years. Furthermore, we can segment this by continent and observe which regions of the world are seeing the most relevance in migration stories.
-
-```{r analysis 2}
-# Frequency of Migrant Articles over time
-cleaned_articles_df %>% 
-  ggplot() +
-  geom_bar(mapping = aes(x = year,  fill = subsection_name), alpha = 0.8) +
-  scale_fill_brewer(palette = "Dark2") +
-  labs(title = "Frequency of Migrant Articles Over Time",
-       subtitle = "From 2015-2020",
-         x = "Year",
-         y = "Frequency",
-       fill = "Continent")
-
-# Facet wrap by continent
-cleaned_articles_df %>% 
-  ggplot() +
-  geom_bar(mapping = aes(x = year, fill = subsection_name), alpha = 0.8) +
-  scale_fill_brewer(palette = "Dark2") +
-  labs(title = "Frequency of Migrant Articles Over Time By Continent",
-       subtitle = "From 2015-2020",
-         x = "Year",
-         y = "Frequency",
-       fill = "Continent") +
-  facet_wrap(~subsection_name)
-
-```
-
-Again, perhaps unexpectedly, Europe has dominated the stories on migration for the past five years and more or less accounts for the decrease in migrant stories since 2015. Australia, the Middle East, and Asia Pacific all see a small uptick in articles during this 2015-2016 period as well. Other than this trend, there's a comparably smaller spike in migration articles in Americas in 2018.
-
-
-### Article Word Count Over Time
-
-Just to add in another continuous variable, it might be interesting to see if word count of these stories have increased or decreased over time. My initial hunch is that as the crisis is just unraveling, journalists are trying to public short bytes of news to capture current events, and as the crisis becomes less novel (albeit still as pressing), there may be longer pieces that emerge from the NYT later in the years. 
-
-```{r analysis 3, message = FALSE}
-
-# How long are these articles and is there a relationship over time? What about by continent?
-ggplot(data = cleaned_articles_df, mapping = aes(x = pub_date, y = word_count)) +
-  geom_point(aes(color = subsection_name), alpha = 0.3) +
-  geom_smooth(size = 0.4, color = "black") +
-  scale_fill_brewer(palette = "Dark2") +
-  labs(title = "Publication Date and Word Count Scatter Plot (2015-2020)",
-         x = "Publication Date",
-         y = "Word Count",
-       color = "Continent")
-
-```
-
-This is a pretty flat linear relationship, so we might want to see if we can parse these data points out by each individual continent and observe that relationship.
-
-```{r analysis 4, message = FALSE}
-# Does this differ across continents? Use facet wrap to see
-ggplot(data = cleaned_articles_df, mapping = aes(x = pub_date, y = word_count)) +
-  geom_point(aes(color = subsection_name), alpha = 0.3, size = 0.7) +
-  geom_smooth(size = 0.1) +
-  scale_fill_brewer(palette = "Dark2") +
-  labs(title = "Publication Date and Word Count Scatter Plot (2015-2020)",
-       subtitle = "By Continental Region",
-         x = "Publication Date",
-         y = "Word Count",
-       color = "Continent") +
-  facet_wrap(~subsection_name)
-
-```
-
-Generally, there's a somewhat positive linear relationship between all the continents except the Middle East and Asia Pacific. However, it's also worth noting the sheer number of data points in Europe, so below I've attempted to look at Europe as a specific case.
-
-
-### Europe Stories and Word Count
-
-I can also see that there are way more data points from 2015-2016, so we can further narrow in the data to look at just Europe and see if my previous hunch might be true.
-
-```{r analysis 3 pt 2, message = FALSE}
-
-cleaned_articles_df %>% 
-  filter(year == 2015 | year == 2016,
-         subsection_name == "Europe") %>%
-ggplot(mapping = aes(x = pub_date, y = word_count)) +
-  geom_point(alpha = 0.5, colour = "skyblue") +
-  geom_smooth(size = 0.4, color = "black") +
-  labs(title = "Publication Date and Word Count Scatter Plot (2015-2016",
-       subtitle = "Distribution of Europe",
-         x = "Publication Date",
-         y = "Word Count")
-```
-
-We can see that there isn't a really solid relationship here between publication date the word count of articles in 2015-2016 for Europe. There is a generally larger frequency of stories form July 2015 to January 2015, however, which makes sense given the time line of the world events.
-
-
-### Estimating a Linear Model
-
-Finally, given that we could see some kind of loose linear relationship between word count and publication year, I thought it might be worth looking into a basic linear relationship between the two.
-
-```{r analysis lin reg}
-
-# Basic Regression -- test a model to see see if pub_date can predict word_count
-lm_base <- lm(word_count ~ pub_date, data = cleaned_articles_df) %>% 
-  tidy()
-
-knitr::kable(lm_base,
-              col.names = c('Term', 'Estimate', 'Standard Error', 'Statistic', 'P-Value'))
-```
-So, a basic model shows us that if we regress `pub_date` on `word_count`, we get a pretty flat, almost zero, estimate, and a P-value of basically zero.
-
-```{r analysis lin reg model}
-# Create the model
-lm_mod <- linear_reg() %>% 
-  set_engine("lm") 
-
-# Fit the Model
-lm_fit <- lm_mod %>% 
-  fit(word_count ~ pub_date,
-      data = cleaned_articles_df)
-  
-# Using model to predict current data
-lm_fit <- lm_fit %>%
-  predict(new_data = cleaned_articles_df) %>% 
-  mutate(true_data = cleaned_articles_df$word_count) %>% 
-rmse(truth = true_data, estimate = .pred) # Calculating Root Mean Square Error
-
-knitr::kable(lm_fit,
-             col.names = c('Output', 'Estimator', 'Estimate'))
-```
-
-As for using this model to predict other points on the data set, we can below see that our RSME is `r lm_fit$.estimate`.
 
 ## Session info
 
