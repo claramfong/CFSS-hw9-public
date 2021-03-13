@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 ```
 
@@ -139,7 +139,7 @@ tidied_text <- cleaned_articles_df %>%
   select(pub_date, 
          lead_paragraph,
          subsection_name) %>% 
-  tibble(line = 1:464, text = lead_paragraph) %>% 
+  tibble(line = 1:464, text = lead_paragraph) %>%  #change this too
   unnest_tokens(word, lead_paragraph) %>% 
   select(!text)
 
@@ -213,14 +213,31 @@ I suppose this analysis tells us more about *where* events relating to migration
 
 ### Article Sentiment Analysis
 
+For this part, I relied on the [Text mining with R textbook](https://www.tidytextmining.com/tidytext.html) cited in our class materials. 
 
-(text) -- need to cite both dictionary lexicons
-* changed the df to use snippet instead of lead paragraph to get rid of the country/cities that keep popping up, see if the frequency is different
+One thing that was interesting about sentiment analysis is the use of dictionaries, created by previous researchers. Below, I used the [Bing et al.](https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html) dictionary that dichotomizes words into positive or negative to analyze the general trends of positive/negative sentiment in articles over time. Also note, I also made two different plots to compare the article snippets from their lead paragraphs to see if there might be any obvious difference between the two. My initial guess would be that snippets would have more extreme language (more positive/ negative) because it is used to capture readers' attention.
 
-```{r sentiment, message=FALSE}
+
+```{r sentiment data, message=FALSE}
+
+# Get Sentiments from all three dictionaries
+afinn_sentiment <- get_sentiments("afinn")
+nrc_sentiment <- get_sentiments("nrc")
+bing_sentiment <- get_sentiments("bing")
 
 # Creating sentiment df
-sentiment_text <- cleaned_articles_df %>% 
+sentiment_text_lead <- cleaned_articles_df %>% 
+  select(pub_date, 
+         lead_paragraph, 
+         subsection_name) %>% 
+  tibble(line = 1:464, text = lead_paragraph) %>%  # this needs to be fixed; the erro keeps popping up in knitting
+  unnest_tokens(word, lead_paragraph) %>% 
+  select(!text) %>% 
+  anti_join(stop_words)
+
+# And again for snippets
+# Creating sentiment df
+sentiment_text_snippet <- cleaned_articles_df %>% 
   select(pub_date, 
          snippet, # differs from tidied_text here by using "snippet" instead of "lead_paragraph"
          subsection_name) %>% 
@@ -229,13 +246,10 @@ sentiment_text <- cleaned_articles_df %>%
   select(!text) %>% 
   anti_join(stop_words)
 
-# Get Sentiment
-afinn_sentiment <- get_sentiments("afinn")
-nrc_sentiment <- get_sentiments("nrc")
-bing_sentiment <- get_sentiments("bing")
-
+```
+```{r sentiment plots, fig.show='hold', out.width="50%"}
 # Using bing dictionary: What does the net positive and negative look like for each continent?
-sentiment_text %>% 
+sentiment_text_lead %>% 
   inner_join(bing_sentiment) %>% 
   count(subsection_name, index = pub_date, sentiment) %>% 
   pivot_wider(names_from = sentiment,
@@ -247,27 +261,33 @@ sentiment_text %>%
   scale_x_date(date_labels = "%Y %b %d") +
     facet_wrap(~subsection_name, ncol = 2)
 
-# Using nrc dictionary
-sentiment_text %>% 
-  inner_join(nrc_sentiment) %>% 
+# Using bing dictionary: What does the net positive and negative look like for each continent?
+sentiment_text_snippet %>% 
+  inner_join(bing_sentiment) %>% 
   count(subsection_name, index = pub_date, sentiment) %>% 
-  pivot_wider(names_from = sentiment, 
-              values_from = n, 
-              values_fill = 0) %>%
-  mutate(sentiment = positive - negative) %>%  # calculate a net score of sentiment
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative) %>% 
   ggplot(aes(x = index, y = sentiment, color = subsection_name)) +
   geom_line(size = 0.4, show.legend = FALSE) +
   scale_x_date(date_labels = "%Y %b %d") +
-    facet_wrap(~subsection_name)
-  
-
-  
-  
+    facet_wrap(~subsection_name, ncol = 2)
 
 ```
 
-## Sentiment Analysis by Dictionary
 
+As we initially predicted, there is more extreme variation in the 
+
+Furthermore, we can go ahead and look at the most commonly used negative and positive words in these articles.
+
+
+```{r}
+# most commonly used negative and positive words
+```
+
+
+## Wordclouds
 
 
 

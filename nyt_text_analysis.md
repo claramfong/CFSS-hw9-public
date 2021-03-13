@@ -14,8 +14,7 @@ Clara Fong
       - [Most Common Words used for Each Continent by `tf-idf`
         Score](#most-common-words-used-for-each-continent-by-tf-idf-score)
       - [Article Sentiment Analysis](#article-sentiment-analysis)
-  - [Sentiment Analysis by
-    Dictionary](#sentiment-analysis-by-dictionary)
+  - [Wordclouds](#wordclouds)
   - [Session info](#session-info)
 
 ## Summary of Report
@@ -113,13 +112,32 @@ disproportionate amount of articles about Europe than other regions.
 
 ### Article Sentiment Analysis
 
-(text) – need to cite both dictionary lexicons \* changed the df to use
-snippet instead of lead paragraph to get rid of the country/cities that
-keep popping up, see if the frequency is different
+For this part, I relied on the [Text mining with R
+textbook](https://www.tidytextmining.com/tidytext.html) cited in our
+class materials.
 
-![](nyt_text_analysis_files/figure-gfm/sentiment-1.png)<!-- -->![](nyt_text_analysis_files/figure-gfm/sentiment-2.png)<!-- -->
+One thing that was interesting about sentiment analysis is the use of
+dictionaries, created by previous researchers. Below, I used the [Bing
+et al.](https://www.cs.uic.edu/~liub/FBS/sentiment-analysis.html)
+dictionary that dichotomizes words into positive or negative to analyze
+the general trends of positive/negative sentiment in articles over time.
+Also note, I also made two different plots to compare the article
+snippets from their lead paragraphs to see if there might be any obvious
+difference between the two. My initial guess would be that snippets
+would have more extreme language (more positive/ negative) because it is
+used to capture readers’ attention.
 
-## Sentiment Analysis by Dictionary
+    ## Joining, by = "word"
+    ## Joining, by = "word"
+
+<img src="nyt_text_analysis_files/figure-gfm/sentiment plots-1.png" style="display: block; margin: auto;" /><img src="nyt_text_analysis_files/figure-gfm/sentiment plots-2.png" style="display: block; margin: auto;" />
+
+As we initially predicted, there is more extreme variation in the
+
+Furthermore, we can go ahead and look at the most commonly used negative
+and positive words in these articles.
+
+## Wordclouds
 
 ## Session info
 
