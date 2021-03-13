@@ -37,7 +37,7 @@ Extending on last week's homework assignment, I wanted to continue looking at Ne
 
 ## Accessing API and Creating Data Frame
 
-### Data Source:
+### Data Source
 
 I used the [New York Times Developers API](https://developer.nytimes.com/apis) to build this data frame. After creating an account and reading the documentation on how to submit a query, I was able to filter for all stories in the past ten years (2010-2020) relating to migrants. Note: this slightly differs from homework 8 because I only looked at the past five years for that asssignment. I wanted to specifically look at the Foreign "newsdesk", which is another way to filter for stories because I was curious to see what was being addressed internationally. Details of how I created the data frame and code can be found on my [R markdown file](nyt.Rmd). To convert the `.json` file to a data frame, I leaned heavily on Professor Terman's PLSC 31101 [course website](https://plsc-31101.github.io/course/collecting-data-from-the-web.html#writing-api-queries).
 
@@ -109,7 +109,7 @@ articles_df <- map_dfr(.x = (1:pages), ~nyt_api_slow(page = .))
 ```
 
 ```{r data cleaning}
-# Main df
+# Cleaning original df, before making it a useful tidy text formal
 cleaned_articles_df <- articles_df %>% 
   select(snippet,
          lead_paragraph,
@@ -121,6 +121,7 @@ cleaned_articles_df <- articles_df %>%
          subsection_name != "Politics",
          subsection_name == recode(subsection_name, Canada = "Americas")) %>% 
   mutate(pub_date = ymd_hms(pub_date),
+         pub_date = date(pub_date),
          year = year(pub_date),
          subsection_name = as.factor(subsection_name))
 
@@ -129,7 +130,8 @@ cleaned_articles_df <- articles_df %>%
 ```
 
 ### Tidying the Text
-(notes)
+
+Because each row in the new data frame consists of the details of one articles, I needed to select only necessary information from the cells with text in them. This meant I could select from the title, the lead paragraph, or the "snippet," which I think is used for social media/advertising purposes. I chose to analyze the lead paragraphs for the overall sentiment among all the articles in the past 10 years. To tidy the data, I started by making each word in the leading paragraph a row, then filtered the `stop_words` (ones that hold little semantic meaning) from the text.
 
 ```{r tidied text, message=FALSE, warning=FALSE}
 # Select only for the lead paragraph, it's already in tibble() format
@@ -153,24 +155,31 @@ tidied_text <- tidied_text %>%
 
 ### Most Common Words in Leading Paragraphs
 
-(text)
+Starting off, it would be interesting to look at what are the most common words used in these articles in the past 10 years before looking at any kind of sentiment analysis. I'm curious to see if we will capture any meaningful verbs or adjectives used to describe migrants/migrant story.
 
 ```{r common words viz}
 # Count and Plot the Frequency of Certain Words
 tidied_text %>% 
   count(word, sort = TRUE) %>% 
-  filter(word != "migrants") %>% #removing because it's redundant given all articles are about migrants
+  filter(word != "migrants") %>% #removing bc it's redundant given all articles are filter to mention migrants
   arrange(desc(n)) %>% 
   head(10) %>% 
   ggplot(aes(x = n, y = reorder(word, n))) +
   geom_col()
 ```
 
-### Most Common Words used for Each Continent 
+Unexpectedly, the most commonly used word is Europe/European, which is interesting considering the migrant European crisis didn't happen until 2015-2016. This suggests that there was really a spike in articles talking about migrants during this period, much more so than in the previous 5 years (2010-2015) and perhaps even after. 
+
+It should also be noted that there are a few semantically less meaningful words included in this chart (e.g. friday, people, thousand). Given that this analysis will only take the top used word, we will need to do more of an analysis of sentiment and not just the text itself to further evaluate what kind of language is being used to describe migrants generally and around the world.
+
+
+### Most Common Words used for Each Continent by `tf-idf` Score
+
+As we conducted above, one way to quantify the language of these text documents is to look a term's frequency (how often it is mentioned). However, as we also saw above, this doesn't always allow us to take the most important words even after filtering for stop words. So, we can use a inverse document frequency to decrease the weight of commonly used words and increase the weight of words not used as much. 
 
 ```{r common words cont}
 
-# Calculate tf-idf scores for words mention in each continent area
+# Calculate tf-idf scores for words mention in each continent area in lead paragraph
 continent_tf_idf <- tidied_text %>%
   count(subsection_name, word) %>%
   bind_tf_idf(term = word, document = subsection_name, n = n)
@@ -178,29 +187,32 @@ continent_tf_idf <- tidied_text %>%
 # visualize the top N terms per character by tf-idf score
 continent_tf_idf %>%
   arrange(desc(tf_idf)) %>%
-  mutate(word = factor(word, levels = rev(unique(word)))) %>%
+  mutate(word = factor(word, levels = rev(unique(word)))) %>% # return words as unique factors in word col
   group_by(subsection_name) %>%
   slice_max(n = 10, order_by = tf_idf, with_ties = FALSE) %>%
   # resolve ambiguities when same word appears for different characters
   ungroup() %>%
   mutate(word = reorder_within(x = word, by = tf_idf, within = subsection_name)) %>%
-  ggplot(mapping = aes(x = word, y = tf_idf)) +
+  ggplot(mapping = aes(x = word, 
+                       y = tf_idf)) +
   geom_col(show.legend = FALSE) +
   scale_x_reordered() +
-  labs(
-    title = "Most important words in Articles about Migration",
-    subtitle = "By Continent",
-    x = NULL,
-    y = "tf-idf",
-    caption = "Source: NYT API"
-  ) +
+  labs(title = "Most important words in Articles about Migration",
+       subtitle = "By Continent",
+       x = NULL,
+       y = "tf-idf",
+       caption = "Source: NYT API") +
   facet_wrap(~subsection_name, scales = "free") +
   coord_flip()
-
 ```
+
+After creating a `tf-idf` score, the plots identify word that are important to a text but not used *too* commonly. I have further gone in and grouped these by continents. As we can see, the "important words" by `tf-idf` are actually countries or regions within the continents. That being said, we still see some interesting phrases such as how the Americas includes "president", "border", "trump," and Australia includes "gangs" and "detention".
+
+I suppose this analysis tells us more about *where* events relating to migration are happening most frequently than *what* is being discussed. Furthermore, segmenting by continent gives us a more nuanced observation than the general word frequency, since we know that there are a disproportionate amount of articles about Europe than other regions.
 
 
 ### Article Sentiment Analysis
+
 
 (text) -- need to cite both dictionary lexicons
 * changed the df to use snippet instead of lead paragraph to get rid of the country/cities that keep popping up, see if the frequency is different
@@ -220,23 +232,41 @@ sentiment_text <- cleaned_articles_df %>%
 # Get Sentiment
 afinn_sentiment <- get_sentiments("afinn")
 nrc_sentiment <- get_sentiments("nrc")
+bing_sentiment <- get_sentiments("bing")
 
-articles_sentiment <- tidied_text %>% 
+# Using bing dictionary: What does the net positive and negative look like for each continent?
+sentiment_text %>% 
+  inner_join(bing_sentiment) %>% 
+  count(subsection_name, index = pub_date, sentiment) %>% 
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0) %>% 
+  mutate(sentiment = positive - negative) %>% 
+  ggplot(aes(x = index, y = sentiment, color = subsection_name)) +
+  geom_line(size = 0.4, show.legend = FALSE) +
+  scale_x_date(date_labels = "%Y %b %d") +
+    facet_wrap(~subsection_name, ncol = 2)
+
+# Using nrc dictionary
+sentiment_text %>% 
   inner_join(nrc_sentiment) %>% 
   count(subsection_name, index = pub_date, sentiment) %>% 
-  spread(sentiment, n, fill = 0) %>% #could try to use pivot_longer here
-  mutate(sentiment = positive - negative)
-
-  ggplot(articles_sentiment, aes(x = index, y = sentiment, fill = subsection_name)) +
-  geom_col() +
+  pivot_wider(names_from = sentiment, 
+              values_from = n, 
+              values_fill = 0) %>%
+  mutate(sentiment = positive - negative) %>%  # calculate a net score of sentiment
+  ggplot(aes(x = index, y = sentiment, color = subsection_name)) +
+  geom_line(size = 0.4, show.legend = FALSE) +
+  scale_x_date(date_labels = "%Y %b %d") +
     facet_wrap(~subsection_name)
   
-  
-#  ??? wtf is happening why is it not graphing
+
   
   
 
 ```
+
+## Sentiment Analysis by Dictionary
 
 
 

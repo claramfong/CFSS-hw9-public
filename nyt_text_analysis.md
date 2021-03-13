@@ -1,19 +1,21 @@
 Analyzing Text from New York Times Article Abstracts
 ================
 Clara Fong
-2021-03-11
+2021-03-13
 
   - [Summary of Report](#summary-of-report)
   - [Accessing API and Creating Data
     Frame](#accessing-api-and-creating-data-frame)
-      - [Data Source:](#data-source)
+      - [Data Source](#data-source)
       - [Tidying the Text](#tidying-the-text)
   - [Text Analysis](#text-analysis)
       - [Most Common Words in Leading
         Paragraphs](#most-common-words-in-leading-paragraphs)
-      - [Most Common Words used for Each
-        Continent](#most-common-words-used-for-each-continent)
+      - [Most Common Words used for Each Continent by `tf-idf`
+        Score](#most-common-words-used-for-each-continent-by-tf-idf-score)
       - [Article Sentiment Analysis](#article-sentiment-analysis)
+  - [Sentiment Analysis by
+    Dictionary](#sentiment-analysis-by-dictionary)
   - [Session info](#session-info)
 
 ## Summary of Report
@@ -31,7 +33,7 @@ are talking about migration in these articles across the world.
 
 ## Accessing API and Creating Data Frame
 
-### Data Source:
+### Data Source
 
 I used the [New York Times Developers
 API](https://developer.nytimes.com/apis) to build this data frame. After
@@ -49,19 +51,65 @@ website](https://plsc-31101.github.io/course/collecting-data-from-the-web.html#w
 
 ### Tidying the Text
 
-(notes)
+Because each row in the new data frame consists of the details of one
+articles, I needed to select only necessary information from the cells
+with text in them. This meant I could select from the title, the lead
+paragraph, or the “snippet,” which I think is used for social
+media/advertising purposes. I chose to analyze the lead paragraphs for
+the overall sentiment among all the articles in the past 10 years. To
+tidy the data, I started by making each word in the leading paragraph a
+row, then filtered the `stop_words` (ones that hold little semantic
+meaning) from the text.
 
 ## Text Analysis
 
 ### Most Common Words in Leading Paragraphs
 
-(text)
+Starting off, it would be interesting to look at what are the most
+common words used in these articles in the past 10 years before looking
+at any kind of sentiment analysis. I’m curious to see if we will capture
+any meaningful verbs or adjectives used to describe migrants/migrant
+story.
 
 ![](nyt_text_analysis_files/figure-gfm/common%20words%20viz-1.png)<!-- -->
 
-### Most Common Words used for Each Continent
+Unexpectedly, the most commonly used word is Europe/European, which is
+interesting considering the migrant European crisis didn’t happen until
+2015-2016. This suggests that there was really a spike in articles
+talking about migrants during this period, much more so than in the
+previous 5 years (2010-2015) and perhaps even after.
+
+It should also be noted that there are a few semantically less
+meaningful words included in this chart (e.g. friday, people, thousand).
+Given that this analysis will only take the top used word, we will need
+to do more of an analysis of sentiment and not just the text itself to
+further evaluate what kind of language is being used to describe
+migrants generally and around the world.
+
+### Most Common Words used for Each Continent by `tf-idf` Score
+
+As we conducted above, one way to quantify the language of these text
+documents is to look a term’s frequency (how often it is mentioned).
+However, as we also saw above, this doesn’t always allow us to take the
+most important words even after filtering for stop words. So, we can use
+a inverse document frequency to decrease the weight of commonly used
+words and increase the weight of words not used as much.
 
 ![](nyt_text_analysis_files/figure-gfm/common%20words%20cont-1.png)<!-- -->
+
+After creating a `tf-idf` score, the plots identify word that are
+important to a text but not used *too* commonly. I have further gone in
+and grouped these by continents. As we can see, the “important words” by
+`tf-idf` are actually countries or regions within the continents. That
+being said, we still see some interesting phrases such as how the
+Americas includes “president”, “border”, “trump,” and Australia includes
+“gangs” and “detention”.
+
+I suppose this analysis tells us more about *where* events relating to
+migration are happening most frequently than *what* is being discussed.
+Furthermore, segmenting by continent gives us a more nuanced observation
+than the general word frequency, since we know that there are a
+disproportionate amount of articles about Europe than other regions.
 
 ### Article Sentiment Analysis
 
@@ -69,7 +117,9 @@ website](https://plsc-31101.github.io/course/collecting-data-from-the-web.html#w
 snippet instead of lead paragraph to get rid of the country/cities that
 keep popping up, see if the frequency is different
 
-![](nyt_text_analysis_files/figure-gfm/sentiment-1.png)<!-- -->
+![](nyt_text_analysis_files/figure-gfm/sentiment-1.png)<!-- -->![](nyt_text_analysis_files/figure-gfm/sentiment-2.png)<!-- -->
+
+## Sentiment Analysis by Dictionary
 
 ## Session info
 
@@ -87,7 +137,7 @@ devtools::session_info()
     ##  collate  en_US.UTF-8                         
     ##  ctype    en_US.UTF-8                         
     ##  tz       America/Chicago                     
-    ##  date     2021-03-11                          
+    ##  date     2021-03-13                          
     ## 
     ## ─ Packages ───────────────────────────────────────────────────────────────────
     ##  package     * version    date       lib source        
