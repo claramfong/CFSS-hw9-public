@@ -1,5 +1,5 @@
 ---
-title: "Analyzing Text from New York Times Article Abstracts"
+title: "Analyzing Text from New York Times Articles"
 author: "Clara Fong"
 date: "`r lubridate::today()`"
 output: 
@@ -9,7 +9,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 
 ```
 
@@ -90,7 +90,7 @@ nyt_api <- function(page){
 }
 
 # Test the function on next set of pages
-docs <- nyt_api(page = 2) # yay it works!
+nyt_api(page = 2) # yay it works!
 ```
 
 ```{r building df, include=FALSE, cache = TRUE}
@@ -122,7 +122,6 @@ cleaned_articles_df <- articles_df %>%
          subsection_name == recode(subsection_name, Canada = "Americas")) %>% 
   mutate(pub_date = ymd_hms(pub_date),
          pub_date = date(pub_date),
-         year = year(pub_date),
          subsection_name = as.factor(subsection_name))
 
 # in this cleaned df, there are several areas to extract text from (e.g., the title, the lead paragraph etc.)
@@ -139,7 +138,7 @@ tidied_text <- cleaned_articles_df %>%
   select(pub_date, 
          lead_paragraph,
          subsection_name) %>% 
-  tibble(line = 1:464, text = lead_paragraph) %>%  #change this too
+  tibble(text = lead_paragraph) %>%  #change this too
   unnest_tokens(word, lead_paragraph) %>% 
   select(!text)
 
@@ -165,10 +164,17 @@ tidied_text %>%
   arrange(desc(n)) %>% 
   head(10) %>% 
   ggplot(aes(x = n, y = reorder(word, n))) +
-  geom_col()
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Most Frequent Words Used in Articles about Migrants",
+    subtitle = "In 2010-2020",
+    x = "Frequency",
+    y = "Words",
+    caption = "Source: NYT API"
+  )
 ```
 
-Unexpectedly, the most commonly used word is Europe/European, which is interesting considering the migrant European crisis didn't happen until 2015-2016. This suggests that there was really a spike in articles talking about migrants during this period, much more so than in the previous 5 years (2010-2015) and perhaps even after. 
+Expectedly, the most commonly used word is Europe/European, which is interesting considering the migrant European crisis didn't happen until 2015-2016. This suggests that there was really a spike in articles talking about migrants during this period, much more so than in the previous 5 years (2010-2015) and perhaps even after. 
 
 It should also be noted that there are a few semantically less meaningful words included in this chart (e.g. friday, people, thousand). Given that this analysis will only take the top used word, we will need to do more of an analysis of sentiment and not just the text itself to further evaluate what kind of language is being used to describe migrants generally and around the world.
 
@@ -184,7 +190,7 @@ continent_tf_idf <- tidied_text %>%
   count(subsection_name, word) %>%
   bind_tf_idf(term = word, document = subsection_name, n = n)
 
-# visualize the top N terms per character by tf-idf score
+# Visualize the top n terms per character by tf-idf score
 continent_tf_idf %>%
   arrange(desc(tf_idf)) %>%
   mutate(word = factor(word, levels = rev(unique(word)))) %>% # return words as unique factors in word col
@@ -193,9 +199,12 @@ continent_tf_idf %>%
   # resolve ambiguities when same word appears for different characters
   ungroup() %>%
   mutate(word = reorder_within(x = word, by = tf_idf, within = subsection_name)) %>%
+  # plotting the graph
   ggplot(mapping = aes(x = word, 
-                       y = tf_idf)) +
+                       y = tf_idf,
+                       fill = subsection_name)) +
   geom_col(show.legend = FALSE) +
+  scale_fill_brewer(palette = "Accent") +
   scale_x_reordered() +
   labs(title = "Most important words in Articles about Migration",
        subtitle = "By Continent",
@@ -206,7 +215,7 @@ continent_tf_idf %>%
   coord_flip()
 ```
 
-After creating a `tf-idf` score, the plots identify word that are important to a text but not used *too* commonly. I have further gone in and grouped these by continents. As we can see, the "important words" by `tf-idf` are actually countries or regions within the continents. That being said, we still see some interesting phrases such as how the Americas includes "president", "border", "trump," and Australia includes "gangs" and "detention".
+After creating a `tf-idf` score, the plots identify word that are important to a text but not used *too* commonly. I have further gone in and grouped these by continents. As we can see, the "important words" by `tf-idf` are actually countries or regions within the continents. That being said, we still see some interesting phrases such as how the Middle East includes "coast" or "boat", and Australia includes "contentious" and "detainees".
 
 I suppose this analysis tells us more about *where* events relating to migration are happening most frequently than *what* is being discussed. Furthermore, segmenting by continent gives us a more nuanced observation than the general word frequency, since we know that there are a disproportionate amount of articles about Europe than other regions.
 
@@ -230,7 +239,7 @@ sentiment_text_lead <- cleaned_articles_df %>%
   select(pub_date, 
          lead_paragraph, 
          subsection_name) %>% 
-  tibble(line = 1:464, text = lead_paragraph) %>%  # this needs to be fixed; the erro keeps popping up in knitting
+  tibble(text = lead_paragraph) %>% 
   unnest_tokens(word, lead_paragraph) %>% 
   select(!text) %>% 
   anti_join(stop_words)
@@ -241,14 +250,17 @@ sentiment_text_snippet <- cleaned_articles_df %>%
   select(pub_date, 
          snippet, # differs from tidied_text here by using "snippet" instead of "lead_paragraph"
          subsection_name) %>% 
-  tibble(line = 1:464, text = snippet) %>% 
+  tibble(text = snippet) %>% 
   unnest_tokens(word, snippet) %>% 
   select(!text) %>% 
   anti_join(stop_words)
 
 ```
-```{r sentiment plots, fig.show='hold', out.width="50%"}
-# Using bing dictionary: What does the net positive and negative look like for each continent?
+
+
+```{r sentiment plots, message = FALSE, fig.show='hold', out.width="50%"}
+
+# Using bing dictionary: What does the net positive and negative look for lead paragraph?
 sentiment_text_lead %>% 
   inner_join(bing_sentiment) %>% 
   count(subsection_name, index = pub_date, sentiment) %>% 
@@ -256,12 +268,22 @@ sentiment_text_lead %>%
               values_from = n,
               values_fill = 0) %>% 
   mutate(sentiment = positive - negative) %>% 
-  ggplot(aes(x = index, y = sentiment, color = subsection_name)) +
-  geom_line(size = 0.4, show.legend = FALSE) +
+  ggplot(aes(x = index, 
+             y = sentiment, 
+             color = subsection_name)) +
+  geom_line(size = 0.4, 
+            show.legend = FALSE) +
   scale_x_date(date_labels = "%Y %b %d") +
-    facet_wrap(~subsection_name, ncol = 2)
+  theme(axis.text.x = element_text(angle = 23)) +
+  scale_y_continuous(name="Sentiment Score", limits=c(-5, 5)) +
+  facet_wrap(~subsection_name, ncol = 2) +
+  labs(
+    title = "Migrant Article Lead Paragraph Sentiment by Continent",
+    subtitle = "From 2010-2020",
+    x = "Year"
+  )
 
-# Using bing dictionary: What does the net positive and negative look like for each continent?
+# Using bing dictionary: What does the net positive and negative look like for snippet?
 sentiment_text_snippet %>% 
   inner_join(bing_sentiment) %>% 
   count(subsection_name, index = pub_date, sentiment) %>% 
@@ -272,12 +294,18 @@ sentiment_text_snippet %>%
   ggplot(aes(x = index, y = sentiment, color = subsection_name)) +
   geom_line(size = 0.4, show.legend = FALSE) +
   scale_x_date(date_labels = "%Y %b %d") +
-    facet_wrap(~subsection_name, ncol = 2)
+  theme(axis.text.x = element_text(angle = 23)) +
+  scale_y_continuous(name="Sentiment Score", limits=c(-5, 5)) +
+    facet_wrap(~subsection_name, ncol = 2) +
+  labs(
+    title = "Migrant Article 'Snippet' Sentiment by Continent",
+    subtitle = "From 2010-2020",
+    x = "Year"
+  )
 
 ```
 
-
-As we initially predicted, there is more extreme variation in the 
+Interestingly, there is more variation and extreme values (both positive and negative) in the lead paragraph's sentiment than in the "snippet" introduction lines. We can also see that, on average, the words used to describe migrants in stories and/or their conditions are overwhelmingly negative. There are rarely any articles across all the key continents that score high on this positive sentiment dictionary.
 
 Furthermore, we can go ahead and look at the most commonly used negative and positive words in these articles.
 
