@@ -24,6 +24,9 @@ library(ggplot2)
 library(tidyr)
 library(tidymodels)
 library(tidytext)
+library(wordcloud)
+library(ggwordcloud)
+library(reshape2)
 
 theme_set(theme_minimal())
 
@@ -122,6 +125,7 @@ cleaned_articles_df <- articles_df %>%
          subsection_name == recode(subsection_name, Canada = "Americas")) %>% 
   mutate(pub_date = ymd_hms(pub_date),
          pub_date = date(pub_date),
+         year = year(pub_date),
          subsection_name = as.factor(subsection_name))
 
 # in this cleaned df, there are several areas to extract text from (e.g., the title, the lead paragraph etc.)
@@ -138,7 +142,7 @@ tidied_text <- cleaned_articles_df %>%
   select(pub_date, 
          lead_paragraph,
          subsection_name) %>% 
-  tibble(text = lead_paragraph) %>%  #change this too
+  tibble(text = lead_paragraph) %>%  
   unnest_tokens(word, lead_paragraph) %>% 
   select(!text)
 
@@ -305,18 +309,89 @@ sentiment_text_snippet %>%
 
 ```
 
-Interestingly, there is more variation and extreme values (both positive and negative) in the lead paragraph's sentiment than in the "snippet" introduction lines. We can also see that, on average, the words used to describe migrants in stories and/or their conditions are overwhelmingly negative. There are rarely any articles across all the key continents that score high on this positive sentiment dictionary.
+Interestingly, there is more variation and extreme values (both positive and negative) in the lead paragraph's sentiment than in the "snippet" introduction lines. We can also see that, on average, the words used to describe migrants in stories and/or their conditions are overwhelmingly negative. There are rarely any articles across all the key continents that score high on this positive sentiment dictionary. For the most part, when the New York Times is talking about migrants, they are not talking about them in a positive way. This is likely due to the fact that migrant working and living conditions are pretty precarious and also easily exploitable. Migrants also encompass documented and undocumented migrants (e.g., migrant workers, refugees, asylum seekers, etc.) as we note with the European migrant crisis.
 
 Furthermore, we can go ahead and look at the most commonly used negative and positive words in these articles.
 
-
-```{r}
+```{r sentiment words, message = FALSE, fig.show='hold', out.width="50%"}
 # most commonly used negative and positive words
+sentiment_text_lead %>% 
+  inner_join(bing_sentiment) %>% 
+  group_by(sentiment) %>%
+  count(word) %>% 
+  group_by(sentiment) %>%
+  slice_max(order_by = n, n = 10) %>% 
+  filter(word != "crisis",
+         word != "led") %>% # there's too many uses of these and it's skewing the data
+  mutate(word = reorder_within(word, n, sentiment)) %>% 
+  ggplot(aes(x = word, y = n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values=c("steelblue", "#E69F00")) +
+  scale_x_reordered() + # renaming the x axis ticks
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = NULL,
+       y = "Word Importance to Sentiment Score") +
+  coord_flip()
+
+sentiment_text_snippet %>% 
+  inner_join(bing_sentiment) %>% 
+  group_by(sentiment) %>%
+  count(word) %>% 
+  group_by(sentiment) %>%
+  slice_max(order_by = n, n = 10) %>% 
+  filter(word != "crisis",
+         word != "led") %>% 
+  mutate(word = reorder_within(word, n, sentiment)) %>% 
+  ggplot(aes(x = word, y = n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_manual(values=c("steelblue", "#E69F00")) +
+  scale_x_reordered() +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = NULL,
+       y = "Word Importance to Sentiment Score") +
+  coord_flip()
 ```
 
+As we can see, the most frequently used terms for both positive and negative have some faults in this dictionary. Of course, without context, some of these words seem like they would be a positive or negative. However, we know that, for example, it is unlikely the term "trump" as an adjective like the dictionary might assume and rather it was likely referring to former President Trump. Another limitation of this analysis is that the positive and negative "sentiment" doesn't give us much insight into the agency vs. object of these stories. For example, "attacks" is one of the most commonly used terms in these articles, but it is unclear whether this is referring to attacks made *onto* migrants or attacks *by* migrants. In this basic analysis, we lose out some of the nuance in these stories by only looking at the terms. 
 
-## Wordclouds
 
+### Wordclouds
+
+Finally, one thing we did not explicitly cover in class was how to make these word clouds, which are another representation of our text data (it was, however, covered in the exercises but we did not have time to go over it in class). Below, I have created a word cloud that polarizes positive and negative words based on the Bing et al. dictionary (again).
+
+```{r word cloud, message = FALSE, fig.show='hold', out.width="50%"}
+
+# using base R word cloud package
+tidied_text %>%
+  inner_join(bing_sentiment) %>%
+  filter(word != "migrant",
+         word != "migrants",
+         word != "crisis") %>% 
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("firebrick", "steelblue4"),
+                   max.words = 100) 
+
+# using ggwordcloud package
+tidied_text %>%
+  inner_join(bing_sentiment) %>% 
+  filter(word != "migrant",
+         word != "migrants",
+         word != "crisis") %>% 
+  count(word, sentiment, sort = TRUE) %>% 
+  slice_max(order_by = n, n = 100) %>% # only the top 100 words
+  ggplot(aes(label = word, size = n,
+           x = sentiment, color = sentiment)) +
+  geom_text_wordcloud_area(rm_outside = TRUE) +
+  scale_size_area(max_size = 20) +
+  scale_x_discrete(breaks = NULL) +
+  ggtitle ("Most frequent terms in NYT Articles on Migrants")
+
+```
+
+Visually, these two plots more or less do the same thing, the left-hand side plot was generated in base R's package `wordcloud`, and the right-hand side plot was generated in ggplot's version, `ggwordcloud`. Both word clouds are another visualization method of the most frequently used words, positive and negative as determined by Bing et al., in the New York Times articles on migration in the last 10 years.
+
+Overall, the plots here show that there are far more negative words than positive ones when reporting on migrants. As mentioned previously, one possible reason this might be the case is that there are more negative things happen to migrants than there are positive ones. This kind of sentiment analysis says less about how reporters talk about migrants and perhaps more about what actually is happening to migrants around the world.
 
 
 ## Session info

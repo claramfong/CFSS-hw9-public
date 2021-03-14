@@ -14,7 +14,7 @@ Clara Fong
       - [Most Common Words used for Each Continent by `tf-idf`
         Score](#most-common-words-used-for-each-continent-by-tf-idf-score)
       - [Article Sentiment Analysis](#article-sentiment-analysis)
-  - [Wordclouds](#wordclouds)
+      - [Wordclouds](#wordclouds)
   - [Session info](#session-info)
 
 ## Summary of Report
@@ -134,12 +134,57 @@ and negative) in the lead paragraph’s sentiment than in the “snippet”
 introduction lines. We can also see that, on average, the words used to
 describe migrants in stories and/or their conditions are overwhelmingly
 negative. There are rarely any articles across all the key continents
-that score high on this positive sentiment dictionary.
+that score high on this positive sentiment dictionary. For the most
+part, when the New York Times is talking about migrants, they are not
+talking about them in a positive way. This is likely due to the fact
+that migrant working and living conditions are pretty precarious and
+also easily exploitable. Migrants also encompass documented and
+undocumented migrants (e.g., migrant workers, refugees, asylum seekers,
+etc.) as we note with the European migrant crisis.
 
 Furthermore, we can go ahead and look at the most commonly used negative
 and positive words in these articles.
 
-## Wordclouds
+<img src="nyt_text_analysis_files/figure-gfm/sentiment words-1.png" width="50%" /><img src="nyt_text_analysis_files/figure-gfm/sentiment words-2.png" width="50%" />
+
+As we can see, the most frequently used terms for both positive and
+negative have some faults in this dictionary. Of course, without
+context, some of these words seem like they would be a positive or
+negative. However, we know that, for example, it is unlikely the term
+“trump” as an adjective like the dictionary might assume and rather it
+was likely referring to former President Trump. Another limitation of
+this analysis is that the positive and negative “sentiment” doesn’t give
+us much insight into the agency vs. object of these stories. For
+example, “attacks” is one of the most commonly used terms in these
+articles, but it is unclear whether this is referring to attacks made
+*onto* migrants or attacks *by* migrants. In this basic analysis, we
+lose out some of the nuance in these stories by only looking at the
+terms.
+
+### Wordclouds
+
+Finally, one thing we did not explicitly cover in class was how to make
+these word clouds, which are another representation of our text data (it
+was, however, covered in the exercises but we did not have time to go
+over it in class). Below, I have created a word cloud that polarizes
+positive and negative words based on the Bing et al. dictionary (again).
+
+<img src="nyt_text_analysis_files/figure-gfm/word cloud-1.png" width="50%" /><img src="nyt_text_analysis_files/figure-gfm/word cloud-2.png" width="50%" />
+
+Visually, these two plots more or less do the same thing, the left-hand
+side plot was generated in base R’s package `wordcloud`, and the
+right-hand side plot was generated in ggplot’s version, `ggwordcloud`.
+Both word clouds are another visualization method of the most frequently
+used words, positive and negative as determined by Bing et al., in the
+New York Times articles on migration in the last 10 years.
+
+Overall, the plots here show that there are far more negative words than
+positive ones when reporting on migrants. As mentioned previously, one
+possible reason this might be the case is that there are more negative
+things happen to migrants than there are positive ones. This kind of
+sentiment analysis says less about how reporters talk about migrants and
+perhaps more about what actually is happening to migrants around the
+world.
 
 ## Session info
 
@@ -191,6 +236,7 @@ devtools::session_info()
     ##  future         1.21.0     2020-12-10 [2] CRAN (R 4.0.1)
     ##  generics       0.1.0      2020-10-31 [2] CRAN (R 4.0.1)
     ##  ggplot2      * 3.3.3      2020-12-30 [2] CRAN (R 4.0.1)
+    ##  ggwordcloud  * 0.5.0      2019-06-02 [2] CRAN (R 4.0.1)
     ##  globals        0.14.0     2020-11-22 [2] CRAN (R 4.0.1)
     ##  glue           1.4.2      2020-08-27 [2] CRAN (R 4.0.1)
     ##  gower          0.2.2      2020-06-23 [2] CRAN (R 4.0.1)
@@ -228,6 +274,7 @@ devtools::session_info()
     ##  pkgconfig      2.0.3      2019-09-22 [2] CRAN (R 4.0.1)
     ##  pkgload        1.1.0      2020-05-29 [2] CRAN (R 4.0.1)
     ##  plyr           1.8.6      2020-03-03 [2] CRAN (R 4.0.1)
+    ##  png            0.1-7      2013-12-03 [2] CRAN (R 4.0.1)
     ##  prettyunits    1.1.1      2020-01-24 [2] CRAN (R 4.0.1)
     ##  pROC           1.16.2     2020-03-19 [2] CRAN (R 4.0.1)
     ##  processx       3.4.5      2020-11-30 [2] CRAN (R 4.0.1)
@@ -236,13 +283,14 @@ devtools::session_info()
     ##  purrr        * 0.3.4      2020-04-17 [2] CRAN (R 4.0.1)
     ##  R6             2.5.0      2020-10-28 [2] CRAN (R 4.0.1)
     ##  rappdirs       0.3.1      2016-03-28 [2] CRAN (R 4.0.1)
-    ##  RColorBrewer   1.1-2      2014-12-07 [2] CRAN (R 4.0.1)
+    ##  RColorBrewer * 1.1-2      2014-12-07 [2] CRAN (R 4.0.1)
     ##  Rcpp           1.0.5      2020-07-06 [2] CRAN (R 4.0.1)
     ##  readr        * 1.4.0      2020-10-05 [2] CRAN (R 4.0.1)
     ##  readxl         1.3.1      2019-03-13 [2] CRAN (R 4.0.1)
     ##  recipes      * 0.1.15     2020-11-11 [2] CRAN (R 4.0.1)
     ##  remotes        2.2.0      2020-07-21 [2] CRAN (R 4.0.1)
     ##  reprex         0.3.0      2019-05-16 [2] CRAN (R 4.0.1)
+    ##  reshape2     * 1.4.4      2020-04-09 [2] CRAN (R 4.0.1)
     ##  rlang          0.4.10     2020-12-30 [2] CRAN (R 4.0.1)
     ##  rmarkdown      2.6        2020-12-14 [2] CRAN (R 4.0.1)
     ##  rpart          4.1-15     2019-04-12 [2] CRAN (R 4.0.1)
@@ -270,6 +318,7 @@ devtools::session_info()
     ##  usethis        2.0.0      2020-12-10 [2] CRAN (R 4.0.1)
     ##  vctrs          0.3.6      2020-12-17 [2] CRAN (R 4.0.1)
     ##  withr          2.3.0      2020-09-22 [2] CRAN (R 4.0.1)
+    ##  wordcloud    * 2.6        2018-08-24 [2] CRAN (R 4.0.1)
     ##  workflows    * 0.2.1      2020-10-08 [2] CRAN (R 4.0.1)
     ##  xfun           0.19       2020-10-30 [2] CRAN (R 4.0.1)
     ##  xml2           1.3.2      2020-04-23 [2] CRAN (R 4.0.1)
