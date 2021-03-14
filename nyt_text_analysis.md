@@ -48,6 +48,18 @@ convert the `.json` file to a data frame, I leaned heavily on Professor
 Terman’s PLSC 31101 [course
 website](https://plsc-31101.github.io/course/collecting-data-from-the-web.html#writing-api-queries).
 
+    ## 
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## cols(
+    ##   snippet = col_character(),
+    ##   lead_paragraph = col_character(),
+    ##   word_count = col_double(),
+    ##   pub_date = col_date(format = ""),
+    ##   headline.main = col_character(),
+    ##   subsection_name = col_character(),
+    ##   year = col_double()
+    ## )
+
 ### Tidying the Text
 
 Because each row in the new data frame consists of the details of one

@@ -111,7 +111,7 @@ nyt_api_slow <- slowly(f = nyt_api, rate = rate_delay(1))
 articles_df <- map_dfr(.x = (1:pages), ~nyt_api_slow(page = .))
 ```
 
-```{r data cleaning}
+```{r data cleaning, message + FALSE}
 # Cleaning original df, before making it a useful tidy text formal
 cleaned_articles_df <- articles_df %>% 
   select(snippet,
@@ -127,6 +127,12 @@ cleaned_articles_df <- articles_df %>%
          pub_date = date(pub_date),
          year = year(pub_date),
          subsection_name = as.factor(subsection_name))
+
+# Saving a local version of the data frame
+readr::write_csv(cleaned_articles_df, "nyt_articles.csv")
+
+# Put in a new object, but below I used the object `cleaned_articles_df`
+local_articles_df <- read_csv("nyt_articles.csv")
 
 # in this cleaned df, there are several areas to extract text from (e.g., the title, the lead paragraph etc.)
 # im going to look at the leading paragraphs of each article
