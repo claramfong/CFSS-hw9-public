@@ -4,12 +4,14 @@ The purpose of this assignment was to practice performing a text analysis, eithe
 
 More details about the assignment can be found [here](https://cfss.uchicago.edu/homework/text-analysis/).
 
+Note: you will need to use the New York Times API to access their article data.
+
 ## Files in Repository
 
 In this repository, you will find two relevant files:
 
 1. The text analysis [Rmarkdown file](nyt_text_analysis.Rmd), and
-2. The corresponding markdown [output](nyt_text_analysis.md)
+2. The corresponding markdown [output](nyt_text_analysis.md).
   
 ## Packages Used
 ```{r}
