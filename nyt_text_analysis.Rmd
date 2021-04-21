@@ -44,7 +44,7 @@ Extending on last week's homework assignment, I wanted to continue looking at Ne
 
 I used the [New York Times Developers API](https://developer.nytimes.com/apis) to build this data frame. After creating an account and reading the documentation on how to submit a query, I was able to filter for all stories in the past ten years (2010-2020) relating to migrants. Note: this slightly differs from homework 8 because I only looked at the past five years for that asssignment. I wanted to specifically look at the Foreign "newsdesk", which is another way to filter for stories because I was curious to see what was being addressed internationally. Details of how I created the data frame and code can be found on my [R markdown file](nyt.Rmd). To convert the `.json` file to a data frame, I leaned heavily on Professor Terman's PLSC 31101 [course website](https://plsc-31101.github.io/course/collecting-data-from-the-web.html#writing-api-queries).
 
-```{r get request function, include = FALSE}
+```{r get request function, include = FALSE, message = FALSE}
 
 # Create an Rprofile page to store API keys using:
 #file.edit(here::here(".Rprofile"))
